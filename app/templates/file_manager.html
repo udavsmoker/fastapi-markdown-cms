@@ -1,0 +1,396 @@
+{% extends "base.html" %}
+
+{% block title %}File Manager - FastAPI Markdown CMS{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="bi bi-folder2-open"></i> File Manager</h1>
+        <div class="btn-group">
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadModal">
+                <i class="bi bi-upload"></i> Upload File
+            </button>
+            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#newFolderModal">
+                <i class="bi bi-folder-plus"></i> New Folder
+            </button>
+            <a href="/admin/editor" class="btn btn-info">
+                <i class="bi bi-plus-circle"></i> New File
+            </a>
+        </div>
+    </div>
+
+    {% if message %}
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endif %}
+
+    <!-- Breadcrumb navigation -->
+    <nav aria-label="breadcrumb" id="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="#" onclick="loadFolder(null); return false;">Root</a></li>
+        </ol>
+    </nav>
+
+    <!-- Folders and Files Display -->
+    <div class="card shadow">
+        <div class="card-body">
+            <div id="fileManager">
+                <div class="text-center py-5">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Upload File Modal -->
+<div class="modal fade" id="uploadModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-upload"></i> Upload Markdown File</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="uploadForm" enctype="multipart/form-data">
+                    <input type="hidden" id="uploadFolderId" name="folder_id">
+                    <div class="mb-3">
+                        <label for="fileInput" class="form-label">Select .md file</label>
+                        <input type="file" class="form-control" id="fileInput" accept=".md" required>
+                    </div>
+                    <div class="alert alert-info">
+                        <small><i class="bi bi-info-circle"></i> Only .md (Markdown) files are supported</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="uploadFile()">
+                    <i class="bi bi-upload"></i> Upload
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- New Folder Modal -->
+<div class="modal fade" id="newFolderModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-folder-plus"></i> Create New Folder</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="folderForm">
+                    <input type="hidden" id="parentFolderId">
+                    <div class="mb-3">
+                        <label for="folderName" class="form-label">Folder Name</label>
+                        <input type="text" class="form-control" id="folderName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="folderSlug" class="form-label">Slug (URL-friendly)</label>
+                        <input type="text" class="form-control" id="folderSlug" pattern="^[a-z0-9-]+$" required>
+                        <div class="form-text">Only lowercase letters, numbers, and hyphens</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="createFolder()">
+                    <i class="bi bi-folder-plus"></i> Create
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentFolderId = null;
+let folders = [];
+let files = [];
+
+// Auto-generate slug from folder name
+document.getElementById('folderName').addEventListener('input', function(e) {
+    const slug = e.target.value
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '');
+    document.getElementById('folderSlug').value = slug;
+});
+
+// Load folders and files
+async function loadFolder(folderId) {
+    currentFolderId = folderId;
+    document.getElementById('uploadFolderId').value = folderId || '';
+    document.getElementById('parentFolderId').value = folderId || '';
+    
+    try {
+        // Load folders
+        const foldersResponse = await fetch('/api/admin/folders/', {
+            credentials: 'include'
+        });
+        
+        if (!foldersResponse.ok) {
+            throw new Error('Failed to load folders');
+        }
+        
+        const allFolders = await foldersResponse.json();
+        folders = folderId ? allFolders.filter(f => f.parent_id === folderId) : allFolders.filter(f => !f.parent_id);
+        
+        // Load files
+        const filesResponse = await fetch('/api/admin/files', {
+            credentials: 'include'
+        });
+        
+        if (!filesResponse.ok) {
+            throw new Error('Failed to load files');
+        }
+        
+        const allFiles = await filesResponse.json();
+        files = folderId ? allFiles.filter(f => f.folder_id === folderId) : allFiles.filter(f => !f.folder_id);
+        
+        renderFileManager();
+    } catch (error) {
+        console.error('Error:', error);
+        document.getElementById('fileManager').innerHTML = `
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle"></i> Failed to load files: ${error.message}
+            </div>
+        `;
+    }
+}
+
+function renderFileManager() {
+    let html = '';
+    
+    // Display folders
+    if (folders.length > 0) {
+        html += '<h6 class="text-muted mb-3"><i class="bi bi-folder"></i> Folders</h6>';
+        html += '<div class="row g-3 mb-4">';
+        folders.forEach(folder => {
+            const statusBadge = folder.status === 'archived' ? '<span class="badge bg-secondary">Archived</span>' : '';
+            html += `
+                <div class="col-md-3">
+                    <div class="card h-100 ${folder.status === 'archived' ? 'bg-light' : ''}">
+                        <div class="card-body">
+                            <h6 class="card-title">
+                                <i class="bi bi-folder-fill text-warning"></i>
+                                <a href="#" onclick="loadFolder(${folder.id}); return false;">${folder.name}</a>
+                                ${statusBadge}
+                            </h6>
+                            <div class="btn-group btn-group-sm mt-2">
+                                <button class="btn btn-outline-warning" onclick="toggleArchiveFolder(${folder.id})" title="Archive/Unarchive">
+                                    <i class="bi bi-archive"></i>
+                                </button>
+                                <button class="btn btn-outline-danger" onclick="deleteFolder(${folder.id}, '${folder.name}')" title="Delete">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+    }
+    
+    // Display files
+    if (files.length > 0) {
+        html += '<h6 class="text-muted mb-3"><i class="bi bi-file-earmark-text"></i> Files</h6>';
+        html += '<div class="table-responsive">';
+        html += '<table class="table table-hover">';
+        html += '<thead><tr><th>Title</th><th>Slug</th><th>Status</th><th>Updated</th><th>Actions</th></tr></thead>';
+        html += '<tbody>';
+        files.forEach(file => {
+            const statusBadge = file.status === 'active' 
+                ? '<span class="badge bg-success">Active</span>' 
+                : '<span class="badge bg-secondary">Archived</span>';
+            html += `
+                <tr>
+                    <td><a href="/files/${file.slug}" target="_blank">${file.title}</a></td>
+                    <td><code>${file.slug}</code></td>
+                    <td>${statusBadge}</td>
+                    <td>${new Date(file.updated_at).toLocaleString()}</td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <a href="/admin/editor/${file.id}" class="btn btn-outline-primary" title="Edit">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <button class="btn btn-outline-warning" onclick="toggleArchiveFile(${file.id})" title="Archive/Unarchive">
+                                <i class="bi bi-archive"></i>
+                            </button>
+                            <button class="btn btn-outline-danger" onclick="deleteFile(${file.id}, '${file.title}')" title="Delete">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+        html += '</tbody></table></div>';
+    }
+    
+    if (folders.length === 0 && files.length === 0) {
+        html = `
+            <div class="text-center py-5">
+                <i class="bi bi-inbox" style="font-size: 4rem; color: #ccc;"></i>
+                <p class="text-muted mt-3">This folder is empty</p>
+            </div>
+        `;
+    }
+    
+    document.getElementById('fileManager').innerHTML = html;
+}
+
+async function createFolder() {
+    const name = document.getElementById('folderName').value;
+    const slug = document.getElementById('folderSlug').value;
+    const parent_id = document.getElementById('parentFolderId').value || null;
+    
+    try {
+        const response = await fetch('/api/admin/folders/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            credentials: 'include',
+            body: JSON.stringify({ name, slug, parent_id })
+        });
+        
+        if (response.ok) {
+            bootstrap.Modal.getInstance(document.getElementById('newFolderModal')).hide();
+            document.getElementById('folderForm').reset();
+            loadFolder(currentFolderId);
+        } else {
+            const error = await response.json();
+            alert('Error: ' + (error.detail || 'Failed to create folder'));
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred');
+    }
+}
+
+async function uploadFile() {
+    const fileInput = document.getElementById('fileInput');
+    const file = fileInput.files[0];
+    
+    if (!file) {
+        alert('Please select a file');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    if (currentFolderId) {
+        formData.append('folder_id', currentFolderId);
+    }
+    
+    try {
+        const response = await fetch('/api/admin/files/upload', {
+            method: 'POST',
+            credentials: 'include',
+            body: formData
+        });
+        
+        if (response.ok) {
+            bootstrap.Modal.getInstance(document.getElementById('uploadModal')).hide();
+            document.getElementById('uploadForm').reset();
+            loadFolder(currentFolderId);
+        } else {
+            const error = await response.json();
+            alert('Error: ' + (error.detail || 'Failed to upload file'));
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred');
+    }
+}
+
+async function toggleArchiveFolder(folderId) {
+    if (!confirm('This will archive/unarchive the folder and all its contents. Continue?')) return;
+    
+    try {
+        const response = await fetch(`/api/admin/folders/${folderId}/archive`, {
+            method: 'PATCH',
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            loadFolder(currentFolderId);
+        } else {
+            alert('Failed to toggle archive status');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred');
+    }
+}
+
+async function deleteFolder(folderId, name) {
+    if (!confirm(`Delete folder "${name}" and all its contents? This cannot be undone!`)) return;
+    
+    try {
+        const response = await fetch(`/api/admin/folders/${folderId}`, {
+            method: 'DELETE',
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            loadFolder(currentFolderId);
+        } else {
+            alert('Failed to delete folder');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred');
+    }
+}
+
+async function toggleArchiveFile(fileId) {
+    try {
+        const response = await fetch(`/api/admin/files/${fileId}/archive`, {
+            method: 'PATCH',
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            loadFolder(currentFolderId);
+        } else {
+            alert('Failed to toggle archive status');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred');
+    }
+}
+
+async function deleteFile(fileId, title) {
+    if (!confirm(`Delete "${title}"? This cannot be undone!`)) return;
+    
+    try {
+        const response = await fetch(`/api/admin/files/${fileId}`, {
+            method: 'DELETE',
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            loadFolder(currentFolderId);
+        } else {
+            alert('Failed to delete file');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred');
+    }
+}
+
+// Load root folder on page load
+loadFolder(null);
+</script>
+{% endblock %}

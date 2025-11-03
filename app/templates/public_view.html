@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}{{ file.title }} - FastAPI Markdown CMS{% endblock %}
+
+{% block content %}
+<div class="container">
+    <article class="markdown-content">
+        <header class="mb-4">
+            <h1>{{ file.title }}</h1>
+            <div class="text-muted small">
+                <i class="bi bi-calendar"></i> Created: {{ file.created_at.strftime('%B %d, %Y') }}
+                {% if file.updated_at != file.created_at %}
+                | <i class="bi bi-pencil"></i> Updated: {{ file.updated_at.strftime('%B %d, %Y') }}
+                {% endif %}
+            </div>
+        </header>
+        
+        <div class="content">
+            {{ content|safe }}
+        </div>
+    </article>
+    
+    <hr class="my-5">
+    
+    <div class="text-center">
+        <a href="/" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-left"></i> Back to All Files
+        </a>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}{% if file %}Edit File{% else %}New File{% endif %} - FastAPI Markdown CMS{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>
+            <i class="bi bi-pencil-square"></i> 
+            {% if file %}Edit File{% else %}New File{% endif %}
+        </h1>
+        <a href="/admin/dashboard" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-danger" role="alert">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    <div class="card shadow">
+        <div class="card-body">
+            <form id="markdownForm">
+                <input type="hidden" id="fileId" value="{% if file %}{{ file.id }}{% endif %}">
+                
+                <div class="mb-3">
+                    <label for="title" class="form-label">Title</label>
+                    <input type="text" class="form-control" id="title" name="title" 
+                           value="{% if file %}{{ file.title }}{% endif %}" required>
+                </div>
+
+                <div class="mb-3">
+                    <label for="slug" class="form-label">Slug (URL-friendly)</label>
+                    <input type="text" class="form-control" id="slug" name="slug" 
+                           value="{% if file %}{{ file.slug }}{% endif %}" 
+                           pattern="^[a-z0-9-]+$" required>
+                    <div class="form-text">Only lowercase letters, numbers, and hyphens</div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="folder_id" class="form-label">Folder (optional)</label>
+                    <select class="form-select" id="folder_id" name="folder_id">
+                        <option value="">Root (no folder)</option>
+                        {% if folders %}
+                        {% for folder in folders %}
+                        <option value="{{ folder.id }}" {% if file and file.folder_id == folder.id %}selected{% endif %}>
+                            {{ folder.name }}
+                        </option>
+                        {% endfor %}
+                        {% endif %}
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label for="content" class="form-label">Content</label>
+                    <textarea id="content" name="content">{% if file %}{{ file.content }}{% endif %}</textarea>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save"></i> Save
+                    </button>
+                    <a href="/admin/files" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.js"></script>
+<script>
+// Initialize SimpleMDE
+const simplemde = new SimpleMDE({
+    element: document.getElementById("content"),
+    spellChecker: false,
+    autosave: {
+        enabled: true,
+        uniqueId: "markdown-editor",
+        delay: 1000,
+    },
+    toolbar: [
+        "bold", "italic", "heading", "|",
+        "quote", "unordered-list", "ordered-list", "|",
+        "link", "image", "|",
+        "preview", "side-by-side", "fullscreen", "|",
+        "guide"
+    ]
+});
+
+// Auto-generate slug from title
+document.getElementById('title').addEventListener('input', function(e) {
+    const slug = e.target.value
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '');
+    document.getElementById('slug').value = slug;
+});
+
+// Handle form submission
+document.getElementById('markdownForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const fileId = document.getElementById('fileId').value;
+    const folder_id = document.getElementById('folder_id').value;
+    const data = {
+        title: document.getElementById('title').value,
+        slug: document.getElementById('slug').value,
+        content: simplemde.value(),
+        folder_id: folder_id ? parseInt(folder_id) : null
+    };
+    
+    try {
+        let response;
+        if (fileId) {
+            // Update existing file
+            response = await fetch(`/api/admin/files/${fileId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include',  // Include cookies
+                body: JSON.stringify(data)
+            });
+        } else {
+            // Create new file
+            response = await fetch('/api/admin/files', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include',  // Include cookies
+                body: JSON.stringify(data)
+            });
+        }
+        
+        if (response.ok) {
+            window.location.href = '/admin/files?message=' + 
+                encodeURIComponent(fileId ? 'File updated successfully' : 'File created successfully');
+        } else {
+            const error = await response.json();
+            alert('Error: ' + (error.detail || 'Failed to save file'));
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred while saving');
+    }
+});
+</script>
+{% endblock %}

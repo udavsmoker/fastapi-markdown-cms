@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - FastAPI Markdown CMS{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="bi bi-speedometer2"></i> Admin Dashboard</h1>
+        <a href="/admin/editor" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> New File
+        </a>
+    </div>
+
+    {% if message %}
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endif %}
+
+    <div class="card shadow">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-files"></i> All Markdown Files</h5>
+        </div>
+        <div class="card-body">
+            {% if files %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Slug</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Updated</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for file in files %}
+                        <tr>
+                            <td>
+                                <a href="/files/{{ file.slug }}" target="_blank">{{ file.title }}</a>
+                            </td>
+                            <td><code>{{ file.slug }}</code></td>
+                            <td>
+                                {% if file.status.value == 'active' %}
+                                <span class="badge bg-success">Active</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Archived</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ file.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>{{ file.updated_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="/admin/editor/{{ file.id }}" class="btn btn-outline-primary" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-outline-warning" 
+                                            data-action="archive" data-file-id="{{ file.id }}" title="Archive/Unarchive">
+                                        <i class="bi bi-archive"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-danger" 
+                                            data-action="delete" data-file-id="{{ file.id }}" data-file-title="{{ file.title }}" title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-inbox" style="font-size: 4rem; color: #ccc;"></i>
+                <p class="text-muted mt-3">No files yet. Create your first markdown file!</p>
+                <a href="/admin/editor" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Create File
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Event delegation for archive and delete buttons
+document.addEventListener('click', function(e) {
+    const target = e.target.closest('[data-action]');
+    if (!target) return;
+    
+    const action = target.dataset.action;
+    const fileId = target.dataset.fileId;
+    
+    if (action === 'archive') {
+        toggleArchive(fileId);
+    } else if (action === 'delete') {
+        const fileTitle = target.dataset.fileTitle;
+        deleteFile(fileId, fileTitle);
+    }
+});
+
+async function toggleArchive(fileId) {
+    if (!confirm('Are you sure you want to toggle the archive status?')) return;
+    
+    try {
+        const response = await fetch(`/api/admin/files/${fileId}/archive`, {
+            method: 'PATCH',
+            credentials: 'include'  // Include cookies
+        });
+        
+        if (response.ok) {
+            location.reload();
+        } else {
+            alert('Failed to toggle archive status');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred');
+    }
+}
+
+async function deleteFile(fileId, title) {
+    if (!confirm(`Are you sure you want to permanently delete "${title}"? This action cannot be undone.`)) return;
+    
+    try {
+        const response = await fetch(`/api/admin/files/${fileId}`, {
+            method: 'DELETE',
+            credentials: 'include'  // Include cookies
+        });
+        
+        if (response.ok) {
+            location.reload();
+        } else {
+            alert('Failed to delete file');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred');
+    }
+}
+</script>
+{% endblock %}

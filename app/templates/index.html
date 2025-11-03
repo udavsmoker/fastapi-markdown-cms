@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}Home - FastAPI Markdown CMS{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="jumbotron bg-light p-5 rounded-3 mb-5">
+        <h1 class="display-4">Welcome to Markdown CMS</h1>
+        <p class="lead">Browse my collection of markdown documents ;)</p>
+    </div>
+
+    {% if folders or files %}
+    
+    <!-- Display folders first -->
+    {% if folders %}
+    <h3 class="mb-4"><i class="bi bi-folder"></i> Folders</h3>
+    <div class="row mb-5">
+        {% for folder in folders %}
+        {% if not folder.parent_id %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 shadow-sm border-warning">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-folder-fill text-warning"></i> {{ folder.name }}
+                    </h5>
+                    <p class="card-text text-muted small">
+                        {% set folder_files = files|selectattr('folder_id', 'equalto', folder.id)|list %}
+                        <i class="bi bi-file-earmark"></i> {{ folder_files|length }} file(s)
+                    </p>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <button class="btn btn-outline-warning btn-sm" onclick="toggleFolder({{ folder.id }})">
+                        <i class="bi bi-eye"></i> View Files
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <!-- Display files without a folder (root files) -->
+    {% set root_files = files|rejectattr('folder_id')|list %}
+    {% if root_files %}
+    <h3 class="mb-4"><i class="bi bi-file-earmark-text"></i> Documents</h3>
+    <div class="row" id="rootFiles">
+        {% for file in root_files %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">{{ file.title }}</h5>
+                    <p class="card-text text-muted small">
+                        <i class="bi bi-calendar"></i> {{ file.created_at.strftime('%B %d, %Y') }}
+                    </p>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <a href="/files/{{ file.slug }}" class="btn btn-primary btn-sm">
+                        <i class="bi bi-book"></i> View More
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <!-- Hidden divs for each folder's files -->
+    {% for folder in folders %}
+    {% if not folder.parent_id %}
+    <div id="folder-{{ folder.id }}" style="display: none;" class="mb-5">
+        <h3 class="mb-4">
+            <i class="bi bi-folder-fill text-warning"></i> {{ folder.name }}
+            <button class="btn btn-sm btn-outline-secondary" onclick="toggleFolder({{ folder.id }})">
+                <i class="bi bi-x"></i> Close
+            </button>
+        </h3>
+        <div class="row">
+            {% set folder_files = files|selectattr('folder_id', 'equalto', folder.id)|list %}
+            {% for file in folder_files %}
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ file.title }}</h5>
+                        <p class="card-text text-muted small">
+                            <i class="bi bi-calendar"></i> {{ file.created_at.strftime('%B %d, %Y') }}
+                        </p>
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <a href="/files/{{ file.slug }}" class="btn btn-primary btn-sm">
+                            <i class="bi bi-book"></i> Read More
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+    
+    {% else %}
+    <div class="text-center py-5">
+        <i class="bi bi-inbox" style="font-size: 4rem; color: #ccc;"></i>
+        <p class="text-muted mt-3">No content available yet.</p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function toggleFolder(folderId) {
+    const folderDiv = document.getElementById('folder-' + folderId);
+    const rootFiles = document.getElementById('rootFiles');
+    
+    if (folderDiv.style.display === 'none') {
+        // Hide all folder divs
+        document.querySelectorAll('[id^="folder-"]').forEach(div => {
+            div.style.display = 'none';
+        });
+        // Show this folder
+        folderDiv.style.display = 'block';
+        // Hide root files
+        if (rootFiles) rootFiles.style.display = 'none';
+        // Scroll to folder
+        folderDiv.scrollIntoView({ behavior: 'smooth' });
+    } else {
+        // Hide this folder
+        folderDiv.style.display = 'none';
+        // Show root files
+        if (rootFiles) rootFiles.style.display = 'flex';
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,1 @@
+"""FastAPI Markdown CMS application."""
