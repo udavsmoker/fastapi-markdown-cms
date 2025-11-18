@@ -87,7 +87,7 @@
                         </p>
                     </div>
                     <div class="card-footer bg-transparent">
-                        <a href="/files/{{ file.slug }}" class="btn btn-primary btn-sm">
+                        <a href="/files/{% if file.folder %}{{ file.folder.slug }}/{% endif %}{{ file.slug }}" class="btn btn-primary btn-sm">
                             <i class="bi bi-book"></i> Read More
                         </a>
                     </div>

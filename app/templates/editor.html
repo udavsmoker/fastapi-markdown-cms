@@ -78,12 +78,13 @@
 <script src="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.js"></script>
 <script>
 // Initialize SimpleMDE
+const fileId = document.getElementById("fileId").value;
 const simplemde = new SimpleMDE({
     element: document.getElementById("content"),
     spellChecker: false,
     autosave: {
         enabled: true,
-        uniqueId: "markdown-editor",
+        uniqueId: fileId ? "markdown-editor-" + fileId : "markdown-editor-new",
         delay: 1000,
     },
     toolbar: [
