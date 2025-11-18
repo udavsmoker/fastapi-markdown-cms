@@ -212,9 +212,15 @@ function renderFileManager() {
             const statusBadge = file.status === 'active' 
                 ? '<span class="badge bg-success">Active</span>' 
                 : '<span class="badge bg-secondary">Archived</span>';
+    
+            let filePath = file.slug;
+            if (file.folder) {
+                filePath = file.folder.slug + '/' + file.slug;
+            }
+            
             html += `
                 <tr>
-                    <td><a href="/files/${file.slug}" target="_blank">${file.title}</a></td>
+                    <td><a href="/files/${filePath}" target="_blank">${file.title}</a></td>
                     <td><code>${file.slug}</code></td>
                     <td>${statusBadge}</td>
                     <td>${new Date(file.updated_at).toLocaleString()}</td>

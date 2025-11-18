@@ -61,10 +61,48 @@ async def home(request: Request, db: Session = Depends(get_db)):
     )
 
 
-@app.get("/files/{slug}", response_class=HTMLResponse)
-async def view_file(request: Request, slug: str, db: Session = Depends(get_db)):
-    """View a single markdown file by slug."""
-    file = markdown_service.get_file_by_slug(db, slug, active_only=True)
+@app.get("/files/{file_path:path}", response_class=HTMLResponse)
+async def view_file(request: Request, file_path: str, db: Session = Depends(get_db)):
+    """View a single markdown file by path (supports folders)."""
+    from app.services import folder_service
+    
+    # Split the path into parts
+    parts = file_path.strip('/').split('/')
+    
+    if len(parts) == 0:
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    # Last part is the file slug
+    file_slug = parts[-1]
+    folder_path = parts[:-1] if len(parts) > 1 else []
+    
+    # If no folder path, search in root
+    if not folder_path:
+        file = markdown_service.get_file_by_slug(db, file_slug, folder_id=None, active_only=True)
+    else:
+        # Navigate through folder hierarchy
+        current_folder = None
+        for folder_slug in folder_path:
+            if current_folder is None:
+                # Looking for root folder
+                folder = folder_service.get_folder_by_slug(db, folder_slug)
+                if not folder or folder.parent_id is not None:
+                    raise HTTPException(status_code=404, detail=f"Folder '{folder_slug}' not found")
+                current_folder = folder
+            else:
+                # Looking for subfolder
+                found = False
+                for subfolder in current_folder.subfolders:
+                    if subfolder.slug == folder_slug:
+                        current_folder = subfolder
+                        found = True
+                        break
+                if not found:
+                    raise HTTPException(status_code=404, detail=f"Folder '{folder_slug}' not found")
+        
+        # Now search for file in the final folder
+        file = markdown_service.get_file_by_slug(db, file_slug, folder_id=current_folder.id, active_only=True)
+    
     if not file:
         raise HTTPException(status_code=404, detail="File not found")
     

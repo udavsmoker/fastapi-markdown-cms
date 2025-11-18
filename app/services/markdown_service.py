@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import Optional
 from app.models.markdown import MarkdownFile, FileStatus
 from app.schemas.markdown import MarkdownCreate, MarkdownUpdate
@@ -6,12 +6,12 @@ from app.schemas.markdown import MarkdownCreate, MarkdownUpdate
 
 def get_file_by_id(db: Session, file_id: int) -> Optional[MarkdownFile]:
     """Get markdown file by ID."""
-    return db.query(MarkdownFile).filter(MarkdownFile.id == file_id).first()
+    return db.query(MarkdownFile).options(joinedload(MarkdownFile.folder)).filter(MarkdownFile.id == file_id).first()
 
 
 def get_file_by_slug(db: Session, slug: str, folder_id: Optional[int] = None, active_only: bool = True) -> Optional[MarkdownFile]:
     """Get markdown file by slug within a folder."""
-    query = db.query(MarkdownFile).filter(MarkdownFile.slug == slug)
+    query = db.query(MarkdownFile).options(joinedload(MarkdownFile.folder)).filter(MarkdownFile.slug == slug)
     
     # Filter by folder
     if folder_id is not None:
@@ -26,7 +26,7 @@ def get_file_by_slug(db: Session, slug: str, folder_id: Optional[int] = None, ac
 
 def get_all_files(db: Session, include_archived: bool = False) -> list[MarkdownFile]:
     """Get all markdown files."""
-    query = db.query(MarkdownFile)
+    query = db.query(MarkdownFile).options(joinedload(MarkdownFile.folder))
     if not include_archived:
         query = query.filter(MarkdownFile.status == FileStatus.ACTIVE)
     return query.order_by(MarkdownFile.created_at.desc()).all()

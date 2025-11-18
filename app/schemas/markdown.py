@@ -67,6 +67,13 @@ class MarkdownResponse(MarkdownBase):
     
     class Config:
         from_attributes = True
+    
+    def get_full_path(self) -> str:
+        """Get the full path including folder hierarchy."""
+        if not self.folder:
+            return self.slug
+        
+        return f"{self.folder.slug}/{self.slug}"
 
 
 class MarkdownList(BaseModel):
@@ -75,9 +82,16 @@ class MarkdownList(BaseModel):
     title: str
     slug: str
     folder_id: Optional[int] = None
+    folder: Optional[FolderResponse] = None
     status: FileStatus
     created_at: datetime
     updated_at: datetime
     
     class Config:
         from_attributes = True
+    
+    def get_full_path(self) -> str:
+        """Get the full path including folder hierarchy."""
+        if not self.folder:
+            return self.slug
+        return f"{self.folder.slug}/{self.slug}"
