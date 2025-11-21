@@ -38,6 +38,7 @@ def create_file(db: Session, file: MarkdownCreate) -> MarkdownFile:
         title=file.title,
         content=file.content,
         slug=file.slug,
+        folder_id=file.folder_id,
         status=FileStatus.ACTIVE
     )
     db.add(db_file)

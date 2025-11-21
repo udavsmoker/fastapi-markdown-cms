@@ -6,6 +6,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
 from fastapi.openapi.utils import get_openapi
 from sqlalchemy.orm import Session
+from starlette.middleware.base import BaseHTTPMiddleware
 import markdown
 
 from app.db.database import get_db, init_db
@@ -25,6 +26,19 @@ app = FastAPI(
     docs_url=None,  # Disable default docs
     redoc_url=None  # Disable default redoc
 )
+
+
+# Add middleware to prevent caching of HTML pages
+class NoCacheMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        if response.headers.get("content-type", "").startswith("text/html"):
+            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+            response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "0"
+        return response
+
+app.add_middleware(NoCacheMiddleware)
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")

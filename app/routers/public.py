@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from app.db.database import get_db
 from app.schemas.markdown import MarkdownResponse, MarkdownList
-from app.services import markdown_service, folder_service
+from app.services import markdown_service, folder_service, download_service
 
 router = APIRouter(prefix="/files", tags=["public"])
 
@@ -12,6 +13,42 @@ async def list_active_files(db: Session = Depends(get_db)):
     """List all active markdown files - Public access."""
     files = markdown_service.get_all_files(db, include_archived=False)
     return files
+
+
+@router.get("/download/{file_id}/markdown")
+async def download_markdown(file_id: int, db: Session = Depends(get_db)):
+    """Download a markdown file as .md"""
+    db_file = markdown_service.get_file_by_id(db, file_id)
+    if not db_file or db_file.status.value != "active":
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    content_bytes, filename = download_service.generate_markdown_file(db_file)
+    
+    return StreamingResponse(
+        content_bytes,
+        media_type="text/markdown",
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}"
+        }
+    )
+
+
+@router.get("/download/{file_id}/pdf")
+async def download_pdf(file_id: int, db: Session = Depends(get_db)):
+    """Download a markdown file as PDF"""
+    db_file = markdown_service.get_file_by_id(db, file_id)
+    if not db_file or db_file.status.value != "active":
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    content_bytes, filename = download_service.generate_pdf_file(db_file)
+    
+    return StreamingResponse(
+        content_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}"
+        }
+    )
 
 
 @router.get("/{file_path:path}", response_model=MarkdownResponse)

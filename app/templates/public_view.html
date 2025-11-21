@@ -22,10 +22,18 @@
     
     <hr class="my-5">
     
-    <div class="text-center">
+    <div class="d-flex justify-content-between align-items-center">
         <a href="/" class="btn btn-outline-primary">
             <i class="bi bi-arrow-left"></i> Back to All Files
         </a>
+        <div class="btn-group" role="group" aria-label="Download options">
+            <a href="/api/files/download/{{ file.id }}/markdown" class="btn btn-outline-success" download>
+                <i class="bi bi-download"></i> Download MD
+            </a>
+            <a href="/api/files/download/{{ file.id }}/pdf" class="btn btn-outline-danger" download>
+                <i class="bi bi-file-pdf"></i> Download PDF
+            </a>
+        </div>
     </div>
 </div>
 {% endblock %}

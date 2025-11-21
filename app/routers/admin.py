@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from typing import Optional
 import re
@@ -6,7 +7,7 @@ from app.db.database import get_db
 from app.dependencies import get_current_user
 from app.models.user import User
 from app.schemas.markdown import MarkdownCreate, MarkdownUpdate, MarkdownResponse, MarkdownList
-from app.services import markdown_service
+from app.services import markdown_service, download_service
 
 router = APIRouter(prefix="/api/admin/files", tags=["admin"])
 
@@ -133,3 +134,47 @@ async def toggle_archive_status(
     if not db_file:
         raise HTTPException(status_code=404, detail="File not found")
     return db_file
+
+
+@router.get("/download/{file_id}/markdown")
+async def download_markdown(
+    file_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Download a markdown file as .md - Admin only."""
+    db_file = markdown_service.get_file_by_id(db, file_id)
+    if not db_file:
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    content_bytes, filename = download_service.generate_markdown_file(db_file)
+    
+    return StreamingResponse(
+        content_bytes,
+        media_type="text/markdown",
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}"
+        }
+    )
+
+
+@router.get("/download/{file_id}/pdf")
+async def download_pdf(
+    file_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Download a markdown file as PDF - Admin only."""
+    db_file = markdown_service.get_file_by_id(db, file_id)
+    if not db_file:
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    content_bytes, filename = download_service.generate_pdf_file(db_file)
+    
+    return StreamingResponse(
+        content_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}"
+        }
+    )
