@@ -1,5 +1,6 @@
 from fastapi import Depends, HTTPException, status, Cookie, Request
 from fastapi.security import OAuth2PasswordBearer
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from typing import Optional
 from app.db.database import get_db
@@ -8,6 +9,12 @@ from app.services.auth_service import get_user_by_username
 from app.models.user import User
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token", auto_error=False)
+
+
+class AuthenticationRequired(Exception):
+    """Exception raised when authentication is required for web pages."""
+    def __init__(self, message: str = "Session expired or user not logged in"):
+        self.message = message
 
 
 async def get_current_user(
@@ -35,6 +42,29 @@ async def get_current_user(
     user = get_user_by_username(db, username=username)
     if user is None:
         raise credentials_exception
+    
+    return user
+
+
+async def get_current_user_redirect(
+    request: Request,
+    token: Optional[str] = Depends(oauth2_scheme),
+    access_token: Optional[str] = Cookie(None),
+    db: Session = Depends(get_db)
+) -> User:
+    """Get the current authenticated user, redirecting to login on failure."""
+    auth_token = token or access_token
+    
+    if not auth_token:
+        raise AuthenticationRequired("Please log in to access this page")
+    
+    username = verify_token(auth_token)
+    if username is None:
+        raise AuthenticationRequired("Session expired. Please log in again")
+    
+    user = get_user_by_username(db, username=username)
+    if user is None:
+        raise AuthenticationRequired("User not found. Please log in again")
     
     return user
 

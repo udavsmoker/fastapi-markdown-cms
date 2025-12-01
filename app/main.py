@@ -13,7 +13,7 @@ from app.db.database import get_db, init_db
 from app.core.config import get_settings
 from app.routers import auth, admin, public, folders
 from app.services import auth_service, markdown_service
-from app.dependencies import get_current_user
+from app.dependencies import get_current_user, get_current_user_redirect, AuthenticationRequired
 from app.models.user import User
 
 settings = get_settings()
@@ -39,6 +39,34 @@ class NoCacheMiddleware(BaseHTTPMiddleware):
         return response
 
 app.add_middleware(NoCacheMiddleware)
+
+# Exception handler for authentication required on web pages
+@app.exception_handler(AuthenticationRequired)
+async def authentication_required_handler(request: Request, exc: AuthenticationRequired):
+    """Redirect to login page when authentication is required."""
+    from urllib.parse import quote
+    return RedirectResponse(
+        url=f"/admin/login?error={quote(exc.message)}",
+        status_code=status.HTTP_303_SEE_OTHER
+    )
+
+# Exception handler for 404 Not Found
+@app.exception_handler(404)
+async def not_found_handler(request: Request, exc: HTTPException):
+    """Show custom 404 page for not found errors."""
+    # For API requests, return JSON
+    if request.url.path.startswith("/api/"):
+        return HTMLResponse(
+            content='{"detail": "Not Found"}',
+            status_code=404,
+            media_type="application/json"
+        )
+    # For web pages, return HTML template
+    return templates.TemplateResponse(
+        "404.html",
+        {"request": request},
+        status_code=404
+    )
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -131,7 +159,7 @@ async def view_file(request: Request, file_path: str, db: Session = Depends(get_
 
 
 @app.get("/admin/login", response_class=HTMLResponse)
-async def login_page(request: Request, db: Session = Depends(get_db)):
+async def login_page(request: Request, error: str = None, db: Session = Depends(get_db)):
     """Admin login page. Redirects to file manager if already logged in."""
     try:
         from fastapi import Cookie
@@ -145,7 +173,7 @@ async def login_page(request: Request, db: Session = Depends(get_db)):
     except:
         pass
     
-    return templates.TemplateResponse("login.html", {"request": request})
+    return templates.TemplateResponse("login.html", {"request": request, "error": error})
 
 
 @app.post("/admin/login")
@@ -197,7 +225,7 @@ async def logout():
 async def admin_dashboard(
     request: Request,
     message: str = None,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_redirect),
     db: Session = Depends(get_db)
 ):
     """Admin dashboard - redirects to file manager."""
@@ -208,7 +236,7 @@ async def admin_dashboard(
 async def file_manager(
     request: Request,
     message: str = None,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_redirect),
     db: Session = Depends(get_db)
 ):
     """File manager page with folder support."""
@@ -225,7 +253,7 @@ async def file_manager(
 async def admin_dashboard_old(
     request: Request,
     message: str = None,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_redirect),
     db: Session = Depends(get_db)
 ):
     """Old admin dashboard page (simple list view)."""
@@ -244,7 +272,7 @@ async def admin_dashboard_old(
 @app.get("/admin/editor", response_class=HTMLResponse)
 async def new_file_editor(
     request: Request,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_redirect),
     db: Session = Depends(get_db)
 ):
     """Editor page for creating a new file."""
@@ -260,7 +288,7 @@ async def new_file_editor(
 async def edit_file_editor(
     request: Request,
     file_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_redirect),
     db: Session = Depends(get_db)
 ):
     """Editor page for editing an existing file."""
