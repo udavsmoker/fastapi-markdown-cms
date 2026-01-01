@@ -22,7 +22,13 @@ def generate_pdf_file(file: MarkdownFile) -> tuple[BytesIO, str]:
     Returns a tuple of (file_content, filename).
     """
     # Convert markdown to HTML
-    md = markdown.Markdown(extensions=['extra', 'codehilite', 'tables', 'fenced_code'])
+    md = markdown.Markdown(extensions=[
+        'extra',
+        'codehilite',
+        'nl2br',
+        'sane_lists',
+        'tables'
+    ])
     html_content = md.convert(file.content)
     
     # Create a complete HTML document with styling
@@ -101,6 +107,46 @@ def generate_pdf_file(file: MarkdownFile) -> tuple[BytesIO, str]:
             th {{
                 background-color: #f6f8fa;
                 font-weight: 600;
+            }}
+            ul, ol {{
+                margin-bottom: 1em;
+                padding-left: 2.5rem;
+            }}
+            ul {{
+                list-style-type: none;
+            }}
+            ul > li {{
+                position: relative;
+                margin-bottom: 0.75rem;
+                line-height: 1.7;
+                padding-left: 0.5rem;
+            }}
+            ul > li::before {{
+                content: "•";
+                position: absolute;
+                left: -1.5rem;
+                font-weight: bold;
+                font-size: 1.2em;
+            }}
+            ol {{
+                list-style-type: decimal;
+            }}
+            ol > li {{
+                margin-bottom: 0.75rem;
+                line-height: 1.7;
+                padding-left: 0.5rem;
+            }}
+            ul ul {{
+                margin-top: 0.5rem;
+                margin-bottom: 0.5rem;
+            }}
+            ul ul > li::before {{
+                content: "◦";
+                font-size: 1.1em;
+            }}
+            ul ul ul > li::before {{
+                content: "▪";
+                font-size: 0.9em;
             }}
             a {{
                 color: #0366d6;

@@ -149,7 +149,13 @@ async def view_file(request: Request, file_path: str, db: Session = Depends(get_
         raise HTTPException(status_code=404, detail="File not found")
     
     # Convert markdown to HTML
-    md = markdown.Markdown(extensions=['extra', 'codehilite'])
+    md = markdown.Markdown(extensions=[
+        'extra',
+        'codehilite',
+        'nl2br',
+        'sane_lists',
+        'tables'
+    ])
     html_content = md.convert(file.content)
     
     return templates.TemplateResponse(
@@ -301,6 +307,34 @@ async def edit_file_editor(
     return templates.TemplateResponse(
         "editor.html",
         {"request": request, "file": file, "folders": folders}
+    )
+
+
+@app.get("/admin/view/{file_id}", response_class=HTMLResponse)
+async def admin_view_file(
+    request: Request,
+    file_id: int,
+    current_user: User = Depends(get_current_user_redirect),
+    db: Session = Depends(get_db)
+):
+    """Admin view for a file (including archived files)."""
+    file = markdown_service.get_file_by_id(db, file_id)
+    if not file:
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    # Convert markdown to HTML
+    md = markdown.Markdown(extensions=[
+        'extra',
+        'codehilite',
+        'nl2br',
+        'sane_lists',
+        'tables'
+    ])
+    html_content = md.convert(file.content)
+    
+    return templates.TemplateResponse(
+        "public_view.html",
+        {"request": request, "file": file, "content": html_content, "is_admin": True}
     )
 
 

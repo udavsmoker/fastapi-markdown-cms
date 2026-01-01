@@ -40,7 +40,7 @@
                         {% for file in files %}
                         <tr>
                             <td>
-                                <a href="/files/{% if file.folder %}{{ file.folder.slug }}/{% endif %}{{ file.slug }}" target="_blank">{{ file.title }}</a>
+                                <a href="/admin/view/{{ file.id }}" target="_blank">{{ file.title }}</a>
                             </td>
                             <td><code>{{ file.slug }}</code></td>
                             <td>

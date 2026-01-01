@@ -70,3 +70,5 @@ dmypy.json
 .azure/
 migrate_db.py
 setup.sh
+
+.github/copilot-instructions.md
