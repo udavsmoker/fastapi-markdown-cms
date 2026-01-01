@@ -8,6 +8,83 @@
     --warning-color: #ffc107;
 }
 
+/* Smooth theme transitions */
+html {
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+body,
+.card,
+.navbar,
+.footer,
+.btn,
+.form-control,
+.form-select,
+.table,
+.modal-content,
+.dropdown-menu,
+.markdown-content .content,
+.markdown-content pre,
+.markdown-content code,
+.markdown-content blockquote,
+.markdown-content table th,
+.markdown-content table td {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Dark theme variables */
+[data-bs-theme="dark"] {
+    --bs-body-bg: #212529;
+    --bs-body-color: #dee2e6;
+}
+
+[data-bs-theme="dark"] .markdown-content .content {
+    color: #dee2e6;
+}
+
+[data-bs-theme="dark"] .markdown-content .content h1,
+[data-bs-theme="dark"] .markdown-content .content h2 {
+    border-bottom-color: #495057;
+}
+
+[data-bs-theme="dark"] .markdown-content pre {
+    background-color: #1e1e1e !important;
+    border-color: #3e3e3e !important;
+    color: #d4d4d4 !important;
+}
+
+[data-bs-theme="dark"] .markdown-content code {
+    background-color: #2d2d2d !important;
+    color: #d4d4d4 !important;
+}
+
+[data-bs-theme="dark"] .markdown-content pre code {
+    background-color: transparent !important;
+}
+
+[data-bs-theme="dark"] .markdown-content blockquote {
+    border-left-color: #6c757d;
+    color: #adb5bd;
+}
+
+[data-bs-theme="dark"] .markdown-content table th,
+[data-bs-theme="dark"] .markdown-content table td {
+    border-color: #495057;
+}
+
+[data-bs-theme="dark"] .markdown-content table th {
+    background-color: #343a40;
+}
+
+[data-bs-theme="dark"] .card {
+    background-color: #343a40;
+    border-color: #495057;
+}
+
+[data-bs-theme="dark"] .jumbotron {
+    background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+}
+
 body {
     min-height: 100vh;
     display: flex;
@@ -141,6 +218,7 @@ main {
     border-radius: 0.25rem;
     overflow-x: auto;
     margin-bottom: 1rem;
+    border: 1px solid #dee2e6;
 }
 
 .markdown-content code {
@@ -149,11 +227,13 @@ main {
     border-radius: 0.25rem;
     font-size: 0.875em;
     font-family: 'Courier New', Courier, monospace;
+    color: #212529;
 }
 
 .markdown-content pre code {
     background-color: transparent;
     padding: 0;
+    color: inherit;
 }
 
 /* Blockquotes */
