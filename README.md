@@ -1,5 +1,8 @@
 # FastAPI Markdown CMS
 
+<img width="1904" height="1000" alt="example" src="https://github.com/user-attachments/assets/d4b7b4e4-0acf-4b13-a548-72a0f98f9c0d" />
+
+
 A modern content management system built with FastAPI for managing markdown files with admin authentication.
 
 ## Features
