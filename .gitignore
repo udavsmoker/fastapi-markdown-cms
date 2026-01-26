@@ -36,6 +36,10 @@ pip-delete-this-directory.txt
 *.sqlite
 *.sqlite3
 
+# Uploads
+uploads/*
+!uploads/.gitkeep
+
 # IDE
 .vscode/
 .idea/

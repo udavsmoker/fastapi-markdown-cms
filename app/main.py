@@ -9,9 +9,11 @@ from sqlalchemy.orm import Session
 from starlette.middleware.base import BaseHTTPMiddleware
 import markdown
 
+from pathlib import Path
+
 from app.db.database import get_db, init_db
 from app.core.config import get_settings
-from app.routers import auth, admin, public, folders
+from app.routers import auth, admin, public, folders, images
 from app.services import auth_service, markdown_service
 from app.dependencies import get_current_user, get_current_user_redirect, AuthenticationRequired
 from app.models.user import User
@@ -71,6 +73,11 @@ async def not_found_handler(request: Request, exc: HTTPException):
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+# Mount uploads directory for serving uploaded images
+uploads_dir = Path(settings.UPLOAD_DIR)
+uploads_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
+
 # Setup Jinja2 templates
 templates = Jinja2Templates(directory="app/templates")
 
@@ -78,6 +85,7 @@ templates = Jinja2Templates(directory="app/templates")
 app.include_router(auth.router, prefix="/api", tags=["auth"])
 app.include_router(admin.router)
 app.include_router(folders.router)
+app.include_router(images.router)
 app.include_router(public.router, prefix="/api")
 
 

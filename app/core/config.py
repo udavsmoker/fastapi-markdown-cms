@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     APP_NAME: str = "FastAPI Markdown CMS"
     DEBUG: bool = True
     
+    # File uploads
+    UPLOAD_DIR: str = "uploads"
+    MAX_IMAGE_SIZE: int = 10 * 1024 * 1024  # 10MB
+    
     class Config:
         env_file = ".env"
         case_sensitive = True
