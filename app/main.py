@@ -1,16 +1,15 @@
 """Main FastAPI application."""
 import os
 from pathlib import Path
-from fastapi import FastAPI, Depends, HTTPException
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, Depends, HTTPException, Request, Form, status
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
 from fastapi.openapi.utils import get_openapi
 from sqlalchemy.orm import Session
 from starlette.middleware.base import BaseHTTPMiddleware
 import markdown
-
-from pathlib import Path
 
 from app.db.database import get_db, init_db
 from app.core.config import get_settings
