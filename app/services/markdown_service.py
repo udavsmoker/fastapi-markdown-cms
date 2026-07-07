@@ -13,11 +13,8 @@ def get_file_by_slug(db: Session, slug: str, folder_id: Optional[int] = None, ac
     """Get markdown file by slug within a folder."""
     query = db.query(MarkdownFile).options(joinedload(MarkdownFile.folder)).filter(MarkdownFile.slug == slug)
     
-    # Filter by folder
-    if folder_id is not None:
+    if force_folder_check:
         query = query.filter(MarkdownFile.folder_id == folder_id)
-    else:
-        query = query.filter(MarkdownFile.folder_id == None)
     
     if active_only:
         query = query.filter(MarkdownFile.status == FileStatus.ACTIVE)

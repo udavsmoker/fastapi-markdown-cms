@@ -42,7 +42,7 @@ async def create_file(
     current_user: User = Depends(get_current_user)
 ):
     """Create a new markdown file - Admin only."""
-    existing_file = markdown_service.get_file_by_slug(db, file.slug, file.folder_id, active_only=False)
+    existing_file = markdown_service.get_file_by_slug(db, file.slug, file.folder_id, active_only=False, force_folder_check=True)
     if existing_file:
         raise HTTPException(status_code=400, detail="File with this slug already exists in this folder")
     
@@ -66,13 +66,13 @@ async def upload_markdown_file(
     filename = file.filename[:-3]
     slug = re.sub(r'[^a-z0-9]+', '-', filename.lower()).strip('-')
     
-    existing_file = markdown_service.get_file_by_slug(db, slug, folder_id, active_only=False)
+    existing_file = markdown_service.get_file_by_slug(db, slug, folder_id, active_only=False, force_folder_check=True)
     if existing_file:
 
         counter = 1
         while existing_file:
             new_slug = f"{slug}-{counter}"
-            existing_file = markdown_service.get_file_by_slug(db, new_slug, folder_id, active_only=False)
+            existing_file = markdown_service.get_file_by_slug(db, new_slug, folder_id, active_only=False, force_folder_check=True)
             if not existing_file:
                 slug = new_slug
                 break
@@ -102,7 +102,7 @@ async def update_file(
     
     if file_update.slug:
         folder_id = file_update.folder_id if file_update.folder_id is not None else db_file.folder_id
-        existing_file = markdown_service.get_file_by_slug(db, file_update.slug, folder_id, active_only=False)
+        existing_file = markdown_service.get_file_by_slug(db, file_update.slug, folder_id, active_only=False, force_folder_check=True)
         if existing_file and existing_file.id != file_id:
             raise HTTPException(status_code=400, detail="Slug already exists")
     

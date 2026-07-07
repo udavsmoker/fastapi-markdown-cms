@@ -1,8 +1,9 @@
 """Main FastAPI application."""
-from fastapi import FastAPI, Request, Depends, Form, HTTPException, status
-from fastapi.responses import HTMLResponse, RedirectResponse
+import os
+from pathlib import Path
+from fastapi import FastAPI, Depends, HTTPException
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
 from fastapi.openapi.utils import get_openapi
 from sqlalchemy.orm import Session
@@ -20,13 +21,13 @@ from app.models.user import User
 
 settings = get_settings()
 
-# Create FastAPI app with docs_url and redoc_url disabled (we'll add auth)
+# Create FastAPI app
 app = FastAPI(
     title=settings.APP_NAME,
     description="A markdown content management system with admin authentication",
     version="1.0.0",
-    docs_url=None,  # Disable default docs
-    redoc_url=None  # Disable default redoc
+    docs_url=None,
+    redoc_url=None,
 )
 
 
@@ -84,6 +85,7 @@ templates = Jinja2Templates(directory="app/templates")
 # Include API routers
 app.include_router(auth.router, prefix="/api", tags=["auth"])
 app.include_router(admin.router)
+app.include_router(images.router)
 app.include_router(folders.router)
 app.include_router(images.router)
 app.include_router(public.router, prefix="/api")
@@ -355,20 +357,46 @@ async def health_check():
 # Protected API documentation endpoints
 @app.get("/docs", include_in_schema=False)
 async def get_documentation(current_user: User = Depends(get_current_user)):
-    """Swagger UI documentation - requires authentication."""
+    """Swagger UI – requires authentication."""
     return get_swagger_ui_html(openapi_url="/openapi.json", title="API Documentation")
 
 
 @app.get("/redoc", include_in_schema=False)
 async def get_redoc(current_user: User = Depends(get_current_user)):
-    """ReDoc documentation - requires authentication."""
+    """ReDoc – requires authentication."""
     return get_redoc_html(openapi_url="/openapi.json", title="API Documentation")
 
 
 @app.get("/openapi.json", include_in_schema=False)
 async def openapi(current_user: User = Depends(get_current_user)):
-    """OpenAPI schema - requires authentication."""
+    """OpenAPI schema – requires authentication."""
     return get_openapi(title=app.title, version=app.version, routes=app.routes)
+
+
+# ── SPA catch-all ──────────────────────────────────────────────────────────────
+# All non-API paths are handled by the React frontend (either the Vite dev
+# server in development, or the built index.html in production).
+
+@app.get("/{path_name:path}", include_in_schema=False)
+async def spa_catch_all(path_name: str):
+    """Serve the React SPA for any frontend route."""
+    # Never intercept real API / asset / doc paths
+    blocked_prefixes = ("api/", "static/", "assets/", "uploads/", "docs", "redoc", "openapi.json", "health")
+    if any(path_name.startswith(p) for p in blocked_prefixes):
+        raise HTTPException(status_code=404, detail="Not found")
+
+    build_index = os.path.join("frontend", "dist", "index.html")
+    if os.path.exists(build_index):
+        return FileResponse(build_index)
+
+    raise HTTPException(
+        status_code=503,
+        detail=(
+            "React build not found. "
+            "Run `cd frontend && npm run build` to generate it, "
+            "or start the Vite dev server on port 5173."
+        ),
+    )
 
 
 if __name__ == "__main__":

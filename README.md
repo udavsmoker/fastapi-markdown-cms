@@ -25,9 +25,16 @@ A modern content management system built with FastAPI for managing markdown file
    source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
-3. Install dependencies:
+3. Install Python dependencies:
    ```bash
    pip install -r requirements.txt
+   ```
+
+4. Install Node.js dependencies for the React frontend:
+   ```bash
+   cd frontend
+   npm install
+   cd ..
    ```
 
 4. Generate a secure secret key and update `.env`:
@@ -43,12 +50,24 @@ A modern content management system built with FastAPI for managing markdown file
 
 ## Running the Application
 
-Start the development server:
+For production, first build the React frontend:
 ```bash
-uvicorn app.main:app --reload
+cd frontend
+npm run build
+cd ..
+```
+
+Then start the FastAPI server:
+```bash
+uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
 The application will be available at http://localhost:8000
+
+For development (hot-reloading):
+1. Terminal 1 (Backend): `uvicorn app.main:app --reload --port 8000`
+2. Terminal 2 (Frontend): `cd frontend && npm run dev`
+(Access via Vite's port, usually http://localhost:5173)
 
 ## Project Structure
 
@@ -74,23 +93,17 @@ homeserver/
 │   │   ├── admin.py           # Admin file management
 │   │   ├── folders.py         # Folder management
 │   │   └── public.py          # Public read-only routes
-│   ├── services/
-│   │   ├── auth_service.py    # Authentication logic
-│   │   ├── markdown_service.py # File CRUD logic
-│   │   └── folder_service.py  # Folder CRUD logic
-│   └── templates/
-│       ├── base.html          # Base template
-│       ├── login.html         # Login page
-│       ├── file_manager.html  # File & folder manager
-│       ├── editor.html        # Markdown editor
-│       ├── index.html         # Public homepage
-│       └── public_view.html   # Individual file view
-├── static/
-│   ├── css/
-│   │   └── styles.css
-│   ├── js/
-│   │   └── editor.js
-│   └── favicon.ico
+│   └── services/
+│       ├── auth_service.py    # Authentication logic
+│       ├── markdown_service.py # File CRUD logic
+│       └── folder_service.py  # Folder CRUD logic
+├── frontend/                   # React SPA (Vite, Tailwind, Framer Motion)
+│   ├── src/
+│   │   ├── components/        # UI components
+│   │   ├── pages/             # Page views (Dashboard, Editor, Home)
+│   │   └── App.tsx            # React router
+│   ├── package.json
+│   └── vite.config.ts
 ├── .env                        # Environment variables
 ├── .gitignore
 ├── requirements.txt
@@ -99,12 +112,6 @@ homeserver/
 └── README.md
 ```
 
-## Development
-
-For development, enable auto-reload:
-```bash
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
 
 ## License
 
